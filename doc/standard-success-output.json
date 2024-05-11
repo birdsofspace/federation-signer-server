@@ -1,0 +1,15 @@
+{
+    "success": true,
+    "code": 200,
+    "status": "success",
+    "user_bridge": "",
+    "source_chainID": 0,
+    "target_chainID": 0,
+    "source_contract": "",
+    "target_contract": "",
+    "symbol": "",
+    "decimal": 0,
+    "amount": 0,
+    "sign_at": "0001-01-01T00:00:00Z",
+    "signature": ""
+}

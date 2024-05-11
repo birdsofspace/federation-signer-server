@@ -8,7 +8,7 @@ This server is used for signing federation messages using Ethereum private keys.
 2. Clone this repository to your local directory.
 3. Open a terminal, navigate to the repository directory, and run the command:
    ```
-   go run main.go
+   go run main.go -port 8081 -host 0.0.0.0
    ```
 4. The server will start running at http://localhost:8081 by default.
 

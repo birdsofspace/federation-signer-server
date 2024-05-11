@@ -1,0 +1,11 @@
+{
+    "user_bridge": "",
+    "source_chainID": "",
+    "target_chainID": "",
+    "source_contract":"",
+    "target_contract":"",
+    "symbol":"",
+    "decimal":"",
+    "amount":"",
+    "request_at":""
+}
