@@ -74,7 +74,20 @@ type SuccessResponse struct {
 	Signature      string `json:"signature"`
 }
 
+type SignaturePack struct {
+	UserBridge     string `json:"user_bridge"`
+	SourceContract string `json:"source_contract"`
+	TargetContract string `json:"target_contract"`
+	SourceChainID  int    `json:"source_chainID"`
+	TargetChainID  int    `json:"target_chainID"`
+	Symbol         string `json:"symbol"`
+	Decimal        int    `json:"decimal"`
+	Amount         int    `json:"amount"`
+	SignAt         string `json:"sign_at"`
+}
+
 var chains []Chain
+var claimedFile *os.File
 
 func main() {
 	var port int
@@ -91,6 +104,10 @@ func main() {
 
 	chainData, _ := os.ReadFile("chainlist.json")
 	_ = json.Unmarshal(chainData, &chains)
+
+	claimedFile, _ = os.OpenFile("claimed.jsonl", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer claimedFile.Close()
+
 }
 
 func getDataByChainID(chains []Chain, chainID int) *Chain {
@@ -210,12 +227,29 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if outputBalance < amount {
 				_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
 			} else {
-
 				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
 				fKey, _ := crypto.ToECDSA(fKeyBytes)
 
-				signMaker, _ := FeederationSign(json, fKey)
+				signaturePack := SignaturePack{
+					UserBridge:     userBridge,
+					SourceContract: sourceContract,
+					TargetContract: targetContract,
+					SourceChainID:  sourceChainID,
+					TargetChainID:  targetChainID,
+					Symbol:         "BOSS",
+					Decimal:        18,
+					Amount:         amount,
+					SignAt:         requestAtStr,
+				}
+				jsignaturePack, _ := json.Marshal(signaturePack)
+
+				signMaker, _ := FeederationSign(string(jsignaturePack), fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
+
+				if _, err := claimedFile.Write(append(jsignaturePack, '\n')); err != nil {
+					fmt.Println("Error:", err)
+					return
+				}
 			}
 
 			err = conn.WriteMessage(messageType, message)
