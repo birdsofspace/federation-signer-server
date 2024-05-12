@@ -211,7 +211,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
 			} else {
 
-				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("ROBURNA_BRIDGE_CONTRACT_ADDRESS"), "0x"))
+				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
 				fKey, _ := crypto.ToECDSA(fKeyBytes)
 
 				signMaker, _ := FeederationSign(json, fKey)
