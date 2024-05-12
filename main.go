@@ -201,6 +201,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				selectedContract = os.Getenv("POLYGON_BRIDGE_CONTRACT_ADDRESS")
 			} else if sourceChainID == 158 {
 				selectedContract = os.Getenv("ROBURNA_BRIDGE_CONTRACT_ADDRESS")
+			} else if sourceChainID == 4002 {
+				selectedContract = os.Getenv("FANTOM_TESTNET_BRIDGE_CONTRACT_ADDRESS")
 			} else {
 				return
 			}
