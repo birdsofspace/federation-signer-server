@@ -1,0 +1,17 @@
+[
+    {
+        "chain_id": 8453,
+        "rpc": "https://mainnet.base.org",
+        "explorer": "https://basescan.org"
+    },
+    {
+        "chain_id": 158,
+        "rpc": "https://dataseed.roburna.com",
+        "explorer": "https://rbascan.com"
+    },
+    {
+        "chain_id": 137,
+        "rpc": "https://rpc-polygon.com",
+        "explorer": "https://polygonscan.com"
+    }
+]

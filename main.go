@@ -1,26 +1,36 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 	"github.com/storyicon/sigverify"
 	"golang.org/x/crypto/sha3"
 )
+
+type Chain struct {
+	ChainID  int    `json:"chain_id"`
+	RPC      string `json:"rpc"`
+	Explorer string `json:"explorer"`
+}
 
 type SignRequest struct {
 	Message    string `json:"message"`
@@ -49,6 +59,8 @@ type PendingResponse struct {
 	Amount        int       `json:"amount"`
 }
 
+var chains []Chain
+
 func main() {
 	var port int
 	var host string
@@ -61,6 +73,18 @@ func main() {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.Printf("Server started on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
+
+	chainData, _ := os.ReadFile("chainlist.json")
+	_ = json.Unmarshal(chainData, &chains)
+}
+
+func getDataByChainID(chains []Chain, chainID int) *Chain {
+	for _, chain := range chains {
+		if chain.ChainID == chainID {
+			return &chain
+		}
+	}
+	return nil
 }
 
 var upgrader = websocket.Upgrader{
@@ -131,13 +155,30 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			rpc_url := getDataByChainID(chains, sourceChainID)
+			ether_client, _ := ethclient.Dial(rpc_url.RPC)
+
 			bridgeAddress := common.HexToAddress(selectedContract)
-			requestFnSignature := []byte("checkInputRequest(address,uint256)")
+			requestFnSignature := []byte("checkRequest(address,uint256)")
 			hash := sha3.NewLegacyKeccak256()
 			hash.Write(requestFnSignature)
 			methodID := hash.Sum(nil)[:4]
+			paddedUserBridge := common.LeftPadBytes(common.HexToAddress(userBridge).Bytes(), 32)
+			newRequestAt := new(big.Int)
+			newRequestAt.SetString(requestAtStr, 10)
+			paddedNewRequestAt := common.LeftPadBytes(newRequestAt.Bytes(), 32)
 
-			outputBalance := 0
+			var dataCall []byte
+			dataCall = append(dataCall, methodID...)
+			dataCall = append(dataCall, paddedUserBridge...)
+			dataCall = append(dataCall, paddedNewRequestAt...)
+
+			outputCheck, _ := ether_client.CallContract(context.Background(), ethereum.CallMsg{
+				To:   &bridgeAddress,
+				Data: dataCall,
+			}, nil)
+			outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Uint64())
+
 			if outputBalance < amount {
 				_ = conn.WriteMessage(messageType, sendPendingResponse(time.Unix(int64(requestAt), 0), userBridge, sourceChainID, targetChainID, amount))
 			} else {
