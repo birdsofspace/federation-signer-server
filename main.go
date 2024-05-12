@@ -210,7 +210,11 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if outputBalance < amount {
 				_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
 			} else {
-				signMaker, _ := FeederationSign(json, )
+
+				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("ROBURNA_BRIDGE_CONTRACT_ADDRESS"), "0x"))
+				fKey, _ := crypto.ToECDSA(fKeyBytes)
+
+				signMaker, _ := FeederationSign(json, fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
 			}
 
