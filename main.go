@@ -13,7 +13,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -49,14 +48,30 @@ type ErrorResponse struct {
 }
 
 type PendingResponse struct {
-	Success       bool      `json:"success"`
-	Code          int       `json:"code"`
-	Status        string    `json:"status"`
-	RequestAt     time.Time `json:"request_at"`
-	User          string    `json:"user"`
-	SourceChainID int       `json:"source_chain_id"`
-	TargetChainID int       `json:"target_chain_id"`
-	Amount        int       `json:"amount"`
+	Success       bool   `json:"success"`
+	Code          int    `json:"code"`
+	Status        string `json:"status"`
+	RequestAt     string `json:"request_at"`
+	User          string `json:"user"`
+	SourceChainID int    `json:"source_chain_id"`
+	TargetChainID int    `json:"target_chain_id"`
+	Amount        int    `json:"amount"`
+}
+
+type SuccessResponse struct {
+	Success        bool   `json:"success"`
+	Code           int    `json:"code"`
+	Status         string `json:"status"`
+	UserBridge     string `json:"user_bridge"`
+	SourceContract string `json:"source_contract"`
+	TargetContract string `json:"target_contract"`
+	SourceChainID  int    `json:"source_chainID"`
+	TargetChainID  int    `json:"target_chainID"`
+	Symbol         string `json:"symbol"`
+	Decimal        int    `json:"decimal"`
+	Amount         int    `json:"amount"`
+	SignAt         string `json:"sign_at"`
+	Signature      string `json:"signature"`
 }
 
 var chains []Chain
@@ -128,15 +143,28 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key source_chainID."))
 			}
 			sourceChainID, _ := strconv.Atoi(sourceChainIDStr)
+
 			targetChainIDStr, ok := data["target_chainID"].(string)
 			if !ok {
 				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key target_chainID."))
 			}
 			targetChainID, _ := strconv.Atoi(targetChainIDStr)
+
+			sourceContract, ok := data["source_contract"].(string)
+			if !ok {
+				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key source_contract."))
+			}
+
+			targetContract, ok := data["target_contract"].(string)
+			if !ok {
+				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key target_contract."))
+			}
+
 			requestAtStr, ok := data["request_at"].(string)
 			if !ok {
 				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key request_at."))
 			}
+
 			requestAt, _ := strconv.Atoi(requestAtStr)
 			amountStr, ok := data["amount"].(string)
 			if !ok {
@@ -180,9 +208,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Uint64())
 
 			if outputBalance < amount {
-				_ = conn.WriteMessage(messageType, sendPendingResponse(time.Unix(int64(requestAt), 0), userBridge, sourceChainID, targetChainID, amount))
+				_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
 			} else {
-
+				signMaker, _ := FeederationSign(json, )
+				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
 			}
 
 			err = conn.WriteMessage(messageType, message)
@@ -275,7 +304,7 @@ func sendErrorResponse(code int, message string) []byte {
 	return errorResponseJsonString
 }
 
-func sendPendingResponse(requestAt time.Time, user string, sourceChainID int, targetChainID int, amount int) []byte {
+func sendPendingResponse(requestAt string, user string, sourceChainID int, targetChainID int, amount int) []byte {
 	errorResponse := PendingResponse{
 		Success:       false,
 		Code:          http.StatusNotAcceptable,
@@ -288,4 +317,24 @@ func sendPendingResponse(requestAt time.Time, user string, sourceChainID int, ta
 	}
 	errorResponseJsonString, _ := json.Marshal(errorResponse)
 	return errorResponseJsonString
+}
+
+func sendSuccessResponse(SignAt string, user string, symbol string, decimal int, sourceContract string, targetContract string, sourceChainID int, targetChainID int, amount int, signature string) []byte {
+	successResponse := SuccessResponse{
+		Success:        true,
+		Code:           200,
+		Status:         "success",
+		UserBridge:     user,
+		SourceChainID:  sourceChainID,
+		TargetChainID:  targetChainID,
+		SourceContract: sourceContract,
+		TargetContract: targetContract,
+		Symbol:         symbol,
+		Decimal:        decimal,
+		Amount:         amount,
+		SignAt:         SignAt,
+		Signature:      signature,
+	}
+	successResponseJsonString, _ := json.Marshal(successResponse)
+	return successResponseJsonString
 }
