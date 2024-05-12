@@ -134,7 +134,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	for {
-		userSign := r.Header.Get("user-sign")
+		queryParams := r.URL.Query()
+		userSign := queryParams.Get("usign")
+		// userSign := r.Header.Get("user-sign")
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)

@@ -1,2 +1,3 @@
-Add header:
-user-sign: personal sign user;
+Add query:
+usign: personal sign user;
+/ws?usign=xxxxxxxxxxxxx
