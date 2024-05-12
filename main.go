@@ -245,11 +245,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 				signMaker, _ := FeederationSign(string(jsignaturePack), fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
-
-				if _, err := claimedFile.Write(append(jsignaturePack, '\n')); err != nil {
-					fmt.Println("Error:", err)
-					return
-				}
+				_, _ = claimedFile.Write(append(jsignaturePack, '\n'))
 			}
 
 			err = conn.WriteMessage(messageType, message)
