@@ -119,9 +119,19 @@ func getDataByChainID(chains []Chain, chainID int) *Chain {
 	return nil
 }
 
+var origins = []string{"http://127.0.0.1:8081", "http://localhost:8081", "http://signer-server.birdsofspace.com"}
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		var origin = r.Header.Get("origin")
+		for _, allowOrigin := range origins {
+			if origin == allowOrigin {
+				return true
+			}
+		}
+		return false
+	},
 }
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
