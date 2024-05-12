@@ -184,7 +184,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key request_at."))
 			}
 
-			requestAt, _ := strconv.Atoi(requestAtStr)
+			// requestAt, _ := strconv.Atoi(requestAtStr)
 			amountStr, ok := data["amount"].(string)
 			if !ok {
 				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key amount."))

@@ -1,5 +1,10 @@
 [
     {
+        "chain_id": 4002,
+        "rpc": "https://rpc.testnet.fantom.network",
+        "explorer": "https://testnet.ftmscan.com"
+    },
+    {
         "chain_id": 8453,
         "rpc": "https://mainnet.base.org",
         "explorer": "https://basescan.org"
