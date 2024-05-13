@@ -87,7 +87,6 @@ type SignaturePack struct {
 }
 
 var chains []Chain
-var claimedFile *os.File
 
 func main() {
 	var port int
@@ -98,9 +97,6 @@ func main() {
 
 	chainData, _ := os.ReadFile("chainlist.json")
 	_ = json.Unmarshal(chainData, &chains)
-
-	claimedFile, _ = os.OpenFile("claimed.jsonl", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	defer claimedFile.Close()
 
 	http.HandleFunc("/sign", handleSign)
 	http.HandleFunc("/ws", handleWebSocket)
@@ -225,30 +221,15 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				To:   &bridgeAddress,
 				Data: dataCall,
 			}, nil)
-			outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Uint64())
-
-			if outputBalance < amount {
+			outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Int64())
+			if outputBalance == amount {
 				_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
 			} else {
 				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
 				fKey, _ := crypto.ToECDSA(fKeyBytes)
-
-				signaturePack := SignaturePack{
-					UserBridge:     userBridge,
-					SourceContract: sourceContract,
-					TargetContract: targetContract,
-					SourceChainID:  sourceChainID,
-					TargetChainID:  targetChainID,
-					Symbol:         "BOSS",
-					Decimal:        18,
-					Amount:         amount,
-					SignAt:         requestAtStr,
-				}
-				jsignaturePack, _ := json.Marshal(signaturePack)
-
-				signMaker, _ := FeederationSign(string(jsignaturePack), fKey)
+				signaturePack := fmt.Sprintf("%s%s%s%d%d%s%d%d%s", userBridge, sourceContract, targetContract, sourceChainID, targetChainID, "BOSS", 18, amount, requestAtStr)
+				signMaker, _ := FeederationSign(string(signaturePack), fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
-				_, _ = claimedFile.Write(append(jsignaturePack, '\n'))
 			}
 		}
 
