@@ -96,22 +96,22 @@ func main() {
 	flag.StringVar(&host, "host", "0.0.0.0", "Host address to listen on")
 	flag.Parse()
 
-	http.HandleFunc("/sign", handleSign)
-	http.HandleFunc("/ws", handleWebSocket)
-	addr := fmt.Sprintf("%s:%d", host, port)
-	log.Printf("Server started on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, nil))
-
 	chainData, _ := os.ReadFile("chainlist.json")
 	_ = json.Unmarshal(chainData, &chains)
 
 	claimedFile, _ = os.OpenFile("claimed.jsonl", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer claimedFile.Close()
 
+	http.HandleFunc("/sign", handleSign)
+	http.HandleFunc("/ws", handleWebSocket)
+	addr := fmt.Sprintf("%s:%d", host, port)
+	log.Printf("Server started on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, nil))
+
 }
 
-func getDataByChainID(chains []Chain, chainID int) *Chain {
-	for _, chain := range chains {
+func getDataByChainID(chainsx []Chain, chainID int) *Chain {
+	for _, chain := range chainsx {
 		if chain.ChainID == chainID {
 			return &chain
 		}
@@ -156,8 +156,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		userBridge = strings.Trim(userBridge, " ")
 		userBridge = strings.ToLower(userBridge)
 		msgHash := crypto.Keccak256Hash([]byte("Request to connect to bridge by user: " + userBridge))
-
-		log.Printf("Received message from: %s", userBridge)
 
 		if validateSignatureByAddress(msgHash, userSign, userBridge) {
 			sourceChainIDStr, ok := data["source_chainID"].(string)
@@ -209,7 +207,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 			rpc_url := getDataByChainID(chains, sourceChainID)
 			ether_client, _ := ethclient.Dial(rpc_url.RPC)
-
 			bridgeAddress := common.HexToAddress(selectedContract)
 			requestFnSignature := []byte("checkRequest(address,uint256)")
 			hash := sha3.NewLegacyKeccak256()
@@ -219,7 +216,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			newRequestAt := new(big.Int)
 			newRequestAt.SetString(requestAtStr, 10)
 			paddedNewRequestAt := common.LeftPadBytes(newRequestAt.Bytes(), 32)
-
 			var dataCall []byte
 			dataCall = append(dataCall, methodID...)
 			dataCall = append(dataCall, paddedUserBridge...)
@@ -254,13 +250,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
 				_, _ = claimedFile.Write(append(jsignaturePack, '\n'))
 			}
-
-			err = conn.WriteMessage(messageType, message)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			log.Printf("Sent message: %s", message)
 		}
 
 	}
@@ -330,7 +319,6 @@ func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, erro
 func validateSignatureByAddress(msgHash common.Hash, userSign string, publicKey string) bool {
 	signature, _ := hexutil.Decode(userSign)
 	address, _ := sigverify.EcRecoverEx(msgHash.Bytes(), signature)
-	log.Print(address)
 	matches := strings.ToLower(address.String()) == publicKey
 	return matches
 }
