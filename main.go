@@ -228,7 +228,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
 				fKey, _ := crypto.ToECDSA(fKeyBytes)
 				signaturePack := fmt.Sprintf("%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr)
-				signMaker, _ := FeederationSign(strings.ToLower(string(signaturePack)), fKey)
+				signMaker, _ := FeederationSignV2(strings.ToLower(string(signaturePack)), fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
 			}
 		}
@@ -267,7 +267,7 @@ func handleSign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	signature, err := FeederationSign(req.Message, key)
+	signature, err := FeederationSignV2(req.Message, key)
 	if err != nil {
 		http.Error(w, "Error signing message", http.StatusInternalServerError)
 		return
@@ -289,6 +289,18 @@ func handleSign(w http.ResponseWriter, r *http.Request) {
 func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, error) {
 	fullMessage := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(message), message)
 	hash := crypto.Keccak256Hash([]byte(fullMessage))
+	signatureBytes, err := crypto.Sign(hash.Bytes(), privateKey)
+	if err != nil {
+		return "", err
+	}
+	signatureBytes[64] += 27
+	return hexutil.Encode(signatureBytes), nil
+}
+
+func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, error) {
+	prefix := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(message)))
+	data := []byte(message)
+	hash := crypto.Keccak256Hash(prefix, data)
 	signatureBytes, err := crypto.Sign(hash.Bytes(), privateKey)
 	if err != nil {
 		return "", err
