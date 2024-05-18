@@ -65,8 +65,8 @@ type SuccessResponse struct {
 	UserBridge     string `json:"user_bridge"`
 	SourceContract string `json:"source_contract"`
 	TargetContract string `json:"target_contract"`
-	SourceChainID  int    `json:"source_chainID"`
-	TargetChainID  int    `json:"target_chainID"`
+	SourceChainID  int    `json:"source_chainid"`
+	TargetChainID  int    `json:"target_chainid"`
 	Symbol         string `json:"symbol"`
 	Decimal        int    `json:"decimal"`
 	Amount         int    `json:"amount"`
@@ -78,8 +78,8 @@ type SignaturePack struct {
 	UserBridge     string `json:"user_bridge"`
 	SourceContract string `json:"source_contract"`
 	TargetContract string `json:"target_contract"`
-	SourceChainID  int    `json:"source_chainID"`
-	TargetChainID  int    `json:"target_chainID"`
+	SourceChainID  int    `json:"source_chainid"`
+	TargetChainID  int    `json:"target_chainid"`
 	Symbol         string `json:"symbol"`
 	Decimal        int    `json:"decimal"`
 	Amount         int    `json:"amount"`
@@ -154,15 +154,15 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		msgHash := crypto.Keccak256Hash([]byte("Request to connect to bridge by user: " + userBridge))
 
 		if validateSignatureByAddress(msgHash, userSign, userBridge) {
-			sourceChainIDStr, ok := data["source_chainID"].(string)
+			sourceChainIDStr, ok := data["source_chainid"].(string)
 			if !ok {
-				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key source_chainID."))
+				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key source_chainid."))
 			}
 			sourceChainID, _ := strconv.Atoi(sourceChainIDStr)
 
-			targetChainIDStr, ok := data["target_chainID"].(string)
+			targetChainIDStr, ok := data["target_chainid"].(string)
 			if !ok {
-				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key target_chainID."))
+				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key target_chainid."))
 			}
 			targetChainID, _ := strconv.Atoi(targetChainIDStr)
 
