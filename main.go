@@ -222,12 +222,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				Data: dataCall,
 			}, nil)
 			outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Int64())
-			if outputBalance == amount {
+			log.Print(amount)
+			log.Print(outputBalance)
+			if outputBalance != amount {
 				_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
 			} else {
 				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
 				fKey, _ := crypto.ToECDSA(fKeyBytes)
-				signaturePack := fmt.Sprintf("%s%s%s%d%d%s%d%d%s", userBridge, sourceContract, targetContract, sourceChainID, targetChainID, "BOSS", 18, amount, requestAtStr)
+				signaturePack := fmt.Sprintf("%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr)
 				signMaker, _ := FeederationSign(string(signaturePack), fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
 			}
