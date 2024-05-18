@@ -222,8 +222,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				Data: dataCall,
 			}, nil)
 			outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Int64())
-			log.Print(amount)
-			log.Print(outputBalance)
 			if outputBalance != amount {
 				_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
 			} else {
