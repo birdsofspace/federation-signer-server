@@ -228,7 +228,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
 				fKey, _ := crypto.ToECDSA(fKeyBytes)
 				signaturePack := fmt.Sprintf("%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr)
-				signMaker, _ := FeederationSign(string(signaturePack), fKey)
+				signMaker, _ := FeederationSign(strings.ToLower(string(signaturePack)), fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
 			}
 		}
