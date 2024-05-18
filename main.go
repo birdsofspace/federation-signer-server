@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -300,16 +301,23 @@ func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, erro
 
 func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, error) {
 	data := []byte(message)
-	hash := crypto.Keccak256Hash(data)
-	signatureBytes, err := crypto.Sign(hash.Bytes(), privateKey)
+	hash := accounts.TextHash(data)
+	signatureBytes, err := crypto.Sign(hash, privateKey)
 	if err != nil {
 		return "", err
 	}
-	var sig []byte
-	sig = append(sig, signatureBytes[1:33]...)
-	sig = append(sig, signatureBytes[33:65]...)
-	sig = append(sig, signatureBytes[0]-27)
-	return "0x" + hex.EncodeToString(sig), nil
+
+	signature := make([]byte, 66)
+	signature[0] = signatureBytes[64] + 27
+	copy(signature[1:33], signatureBytes[0:32])
+	copy(signature[33:65], signatureBytes[32:64])
+	signature[65] = 2
+
+	// var sig []byte
+	// sig = append(sig, signatureBytes[1:33]...)
+	// sig = append(sig, signatureBytes[33:65]...)
+	// sig = append(sig, signatureBytes[0]-27)
+	return "0x" + hex.EncodeToString(signature), nil
 }
 
 func FeederationSignV3(message string, privateKey *ecdsa.PrivateKey) (string, error) {
