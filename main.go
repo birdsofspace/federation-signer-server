@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -298,10 +299,9 @@ func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, erro
 }
 
 func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, error) {
-	prefix := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(message)))
 	data := []byte(message)
-	hash := crypto.Keccak256Hash(prefix, data)
-	signatureBytes, err := crypto.Sign(hash.Bytes(), privateKey)
+	hash := accounts.TextHash(data)
+	signatureBytes, err := crypto.Sign(hash, privateKey)
 	if err != nil {
 		return "", err
 	}
