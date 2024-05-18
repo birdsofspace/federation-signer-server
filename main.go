@@ -306,8 +306,8 @@ func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, er
 	if err != nil {
 		return "", err
 	}
-	signatureBytes[crypto.RecoveryIDOffset] += 27
-	return hex.EncodeToString(signatureBytes), nil
+	// signatureBytes[crypto.RecoveryIDOffset] += 27
+	return "0x" + hex.EncodeToString(signatureBytes), nil
 }
 
 func FeederationSignV3(message string, privateKey *ecdsa.PrivateKey) (string, error) {
