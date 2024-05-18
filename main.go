@@ -227,7 +227,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			} else {
 				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
 				fKey, _ := crypto.ToECDSA(fKeyBytes)
-				signaturePack := strings.ToLower(fmt.Sprintf("%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr))
+				signaturePack := strings.ToLower(fmt.Sprintf("BRIDGEX-%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr))
 				signMaker, _ := FeederationSignV2(signaturePack, fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
 			}
@@ -298,7 +298,18 @@ func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, erro
 }
 
 func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, error) {
-	// prefix := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(message)))
+	prefix := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(message)))
+	data := []byte(message)
+	hash := crypto.Keccak256Hash(prefix, data)
+	signatureBytes, err := crypto.Sign(hash.Bytes(), privateKey)
+	if err != nil {
+		return "", err
+	}
+	signatureBytes[64] += 27
+	return hexutil.Encode(signatureBytes), nil
+}
+
+func FeederationSignV3(message string, privateKey *ecdsa.PrivateKey) (string, error) {
 	data := []byte(message)
 	hash := crypto.Keccak256Hash(data)
 	signatureBytes, err := crypto.Sign(hash.Bytes(), privateKey)
