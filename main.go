@@ -144,94 +144,98 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var data map[string]interface{}
-		_ = json.Unmarshal([]byte(message), &data)
+		if string(message) == "ping" {
+			_ = conn.WriteMessage(messageType, []byte("pong") )
+		} else {
+			var data map[string]interface{}
+			_ = json.Unmarshal([]byte(message), &data)
 
-		userBridge, ok := data["user_bridge"].(string)
-		if !ok {
-			_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key user_bridge."))
-		}
-		userBridge = strings.Trim(userBridge, " ")
-		userBridge = strings.ToLower(userBridge)
-		msgHash := crypto.Keccak256Hash([]byte("Request to connect to bridge by user: " + userBridge))
-
-		if validateSignatureByAddress(msgHash, userSign, userBridge) {
-			sourceChainIDStr, ok := data["source_chainid"].(string)
+			userBridge, ok := data["user_bridge"].(string)
 			if !ok {
-				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key source_chainid."))
+				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key user_bridge."))
 			}
-			sourceChainID, _ := strconv.Atoi(sourceChainIDStr)
+			userBridge = strings.Trim(userBridge, " ")
+			userBridge = strings.ToLower(userBridge)
+			msgHash := crypto.Keccak256Hash([]byte("Request to connect to bridge by user: " + userBridge))
 
-			targetChainIDStr, ok := data["target_chainid"].(string)
-			if !ok {
-				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key target_chainid."))
-			}
-			targetChainID, _ := strconv.Atoi(targetChainIDStr)
+			if validateSignatureByAddress(msgHash, userSign, userBridge) {
+				sourceChainIDStr, ok := data["source_chainid"].(string)
+				if !ok {
+					_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key source_chainid."))
+				}
+				sourceChainID, _ := strconv.Atoi(sourceChainIDStr)
 
-			sourceContract, ok := data["source_contract"].(string)
-			if !ok {
-				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key source_contract."))
-			}
+				targetChainIDStr, ok := data["target_chainid"].(string)
+				if !ok {
+					_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key target_chainid."))
+				}
+				targetChainID, _ := strconv.Atoi(targetChainIDStr)
 
-			targetContract, ok := data["target_contract"].(string)
-			if !ok {
-				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key target_contract."))
-			}
+				sourceContract, ok := data["source_contract"].(string)
+				if !ok {
+					_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key source_contract."))
+				}
 
-			requestAtStr, ok := data["request_at"].(string)
-			if !ok {
-				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key request_at."))
-			}
+				targetContract, ok := data["target_contract"].(string)
+				if !ok {
+					_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key target_contract."))
+				}
 
-			// requestAt, _ := strconv.Atoi(requestAtStr)
-			amountStr, ok := data["amount"].(string)
-			if !ok {
-				_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key amount."))
-			}
-			amount, _ := strconv.Atoi(amountStr)
+				requestAtStr, ok := data["request_at"].(string)
+				if !ok {
+					_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key request_at."))
+				}
 
-			selectedContract := ""
-			if sourceChainID == 8453 {
-				selectedContract = os.Getenv("BASE_BRIDGE_CONTRACT_ADDRESS")
-			} else if sourceChainID == 137 {
-				selectedContract = os.Getenv("POLYGON_BRIDGE_CONTRACT_ADDRESS")
-			} else if sourceChainID == 158 {
-				selectedContract = os.Getenv("ROBURNA_BRIDGE_CONTRACT_ADDRESS")
-			} else if sourceChainID == 4002 {
-				selectedContract = os.Getenv("FANTOM_TESTNET_BRIDGE_CONTRACT_ADDRESS")
-			} else {
-				return
-			}
+				// requestAt, _ := strconv.Atoi(requestAtStr)
+				amountStr, ok := data["amount"].(string)
+				if !ok {
+					_ = conn.WriteMessage(messageType, sendErrorResponse(http.StatusBadRequest, "Bad Request: Must use the JSON key amount."))
+				}
+				amount, _ := strconv.Atoi(amountStr)
 
-			rpc_url := getDataByChainID(chains, sourceChainID)
-			ether_client, _ := ethclient.Dial(rpc_url.RPC)
-			bridgeAddress := common.HexToAddress(selectedContract)
-			requestFnSignature := []byte("checkRequest(address,uint256)")
-			hash := sha3.NewLegacyKeccak256()
-			hash.Write(requestFnSignature)
-			methodID := hash.Sum(nil)[:4]
-			paddedUserBridge := common.LeftPadBytes(common.HexToAddress(userBridge).Bytes(), 32)
-			newRequestAt := new(big.Int)
-			newRequestAt.SetString(requestAtStr, 10)
-			paddedNewRequestAt := common.LeftPadBytes(newRequestAt.Bytes(), 32)
-			var dataCall []byte
-			dataCall = append(dataCall, methodID...)
-			dataCall = append(dataCall, paddedUserBridge...)
-			dataCall = append(dataCall, paddedNewRequestAt...)
+				selectedContract := ""
+				if sourceChainID == 8453 {
+					selectedContract = os.Getenv("BASE_BRIDGE_CONTRACT_ADDRESS")
+				} else if sourceChainID == 137 {
+					selectedContract = os.Getenv("POLYGON_BRIDGE_CONTRACT_ADDRESS")
+				} else if sourceChainID == 158 {
+					selectedContract = os.Getenv("ROBURNA_BRIDGE_CONTRACT_ADDRESS")
+				} else if sourceChainID == 4002 {
+					selectedContract = os.Getenv("FANTOM_TESTNET_BRIDGE_CONTRACT_ADDRESS")
+				} else {
+					return
+				}
 
-			outputCheck, _ := ether_client.CallContract(context.Background(), ethereum.CallMsg{
-				To:   &bridgeAddress,
-				Data: dataCall,
-			}, nil)
-			outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Int64())
-			if outputBalance != amount {
-				_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
-			} else {
-				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
-				fKey, _ := crypto.ToECDSA(fKeyBytes)
-				signaturePack := strings.ToLower(fmt.Sprintf("BRIDGEX-%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr))
-				signMaker, _ := FeederationSignV2(signaturePack, fKey)
-				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
+				rpc_url := getDataByChainID(chains, sourceChainID)
+				ether_client, _ := ethclient.Dial(rpc_url.RPC)
+				bridgeAddress := common.HexToAddress(selectedContract)
+				requestFnSignature := []byte("checkRequest(address,uint256)")
+				hash := sha3.NewLegacyKeccak256()
+				hash.Write(requestFnSignature)
+				methodID := hash.Sum(nil)[:4]
+				paddedUserBridge := common.LeftPadBytes(common.HexToAddress(userBridge).Bytes(), 32)
+				newRequestAt := new(big.Int)
+				newRequestAt.SetString(requestAtStr, 10)
+				paddedNewRequestAt := common.LeftPadBytes(newRequestAt.Bytes(), 32)
+				var dataCall []byte
+				dataCall = append(dataCall, methodID...)
+				dataCall = append(dataCall, paddedUserBridge...)
+				dataCall = append(dataCall, paddedNewRequestAt...)
+
+				outputCheck, _ := ether_client.CallContract(context.Background(), ethereum.CallMsg{
+					To:   &bridgeAddress,
+					Data: dataCall,
+				}, nil)
+				outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Int64())
+				if outputBalance != amount {
+					_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
+				} else {
+					fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
+					fKey, _ := crypto.ToECDSA(fKeyBytes)
+					signaturePack := strings.ToLower(fmt.Sprintf("BRIDGEX-%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr))
+					signMaker, _ := FeederationSignV2(signaturePack, fKey)
+					_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
+				}
 			}
 		}
 
