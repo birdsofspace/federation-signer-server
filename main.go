@@ -307,7 +307,18 @@ func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, er
 		return "", err
 	}
 
-	signatureBytes[64] += 27
+	vParam := signatureBytes[64]
+	if vParam == byte(0) {
+		vParam = byte(27)
+	} else if vParam == byte(1) {
+		vParam = byte(28)
+	}
+	signatureBytes[64] = vParam
+
+	if signatureBytes[64] == 27 || signatureBytes[64] == 28 {
+		signatureBytes[64] -= 27
+	}
+
 	return "0x" + hex.EncodeToString(signatureBytes), nil
 }
 
