@@ -230,7 +230,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				fKey, _ := crypto.ToECDSA(fKeyBytes)
 				signaturePack := strings.ToLower(fmt.Sprintf("BRIDGEX-%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr))
 				log.Print(signaturePack)
-				signMaker, _ := FeederationSignV2(signaturePack, fKey)
+				signMaker, _ := FeederationSign(signaturePack, fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
 			}
 		}
@@ -269,7 +269,7 @@ func handleSign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	signature, err := FeederationSignV2(req.Message, key)
+	signature, err := FeederationSign(req.Message, key)
 	if err != nil {
 		http.Error(w, "Error signing message", http.StatusInternalServerError)
 		return
@@ -307,9 +307,9 @@ func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, er
 		return "", err
 	}
 
-	if signatureBytes[64] == 27 || signatureBytes[64] == 28 {
-		signatureBytes[64] -= 27
-	}
+	// if signatureBytes[64] == 27 || signatureBytes[64] == 28 {
+	// 	signatureBytes[64] -= 27
+	// }
 
 	return "0x" + hex.EncodeToString(signatureBytes), nil
 }
