@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -15,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -288,6 +288,27 @@ func handleSign(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
+func ecdsaSign(hash []byte, privateKey *ecdsa.PrivateKey) ([]byte, []byte, byte, error) {
+	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	// Recover the public key
+	publicKey, err := crypto.Ecrecover(hash, append(r.Bytes(), s.Bytes()...))
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	// Ensure the recovery id is either 27 or 28
+	v := byte(27)
+	if publicKey == nil || !ecdsa.Verify(&privateKey.PublicKey, hash, r, s) {
+		v = byte(28)
+	}
+
+	return r.Bytes(), s.Bytes(), v, nil
+}
+
 func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, error) {
 	fullMessage := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(message), message)
 	hash := crypto.Keccak256Hash([]byte(fullMessage))
@@ -300,18 +321,22 @@ func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, erro
 }
 
 func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, error) {
+	// Calculate the keccak256 hash of the message
 	data := []byte(message)
-	hash := accounts.TextHash(data)
-	signatureBytes, err := crypto.Sign(hash, privateKey)
+	hash := crypto.Keccak256Hash([]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)))
+
+	// Sign the hash using ECDSA
+	r, s, v, err := ecdsaSign(hash.Bytes(), privateKey)
 	if err != nil {
 		return "", err
 	}
 
-	// if signatureBytes[64] == 27 || signatureBytes[64] == 28 {
-	// 	signatureBytes[64] -= 27
-	// }
+	// Concatenate R, S, and V values to produce the final signature
+	signatureBytes := append(r, s...)
+	signatureBytes = append(signatureBytes, v)
 
-	return "0x" + hex.EncodeToString(signatureBytes), nil
+	// Encode the signature to hex format
+	return hexutil.Encode(signatureBytes), nil
 }
 
 func FeederationSignV3(message string, privateKey *ecdsa.PrivateKey) (string, error) {
