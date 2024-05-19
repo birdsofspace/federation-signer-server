@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -307,7 +306,7 @@ func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, er
 	// messagePrefix := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 	// hash := crypto.Keccak256Hash([]byte(data))
 	if message != dstr {
-		return "X", errors.New("Failed")
+		return dstr, nil
 	}
 	pribytes := privateKey.D.Bytes()
 	seckbytes := pribytes
