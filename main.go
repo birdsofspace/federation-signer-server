@@ -302,12 +302,9 @@ func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, erro
 
 func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, error) {
 	// Calculate the keccak256 hash of the message
-	data, dstr := accounts.TextAndHash([]byte(message))
+	data := accounts.TextHash([]byte(message))
 	// messagePrefix := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 	// hash := crypto.Keccak256Hash([]byte(data))
-	if message != dstr {
-		return dstr, nil
-	}
 	pribytes := privateKey.D.Bytes()
 	seckbytes := pribytes
 	if len(pribytes) < 32 {
