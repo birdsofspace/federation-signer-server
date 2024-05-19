@@ -230,7 +230,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
 				fKey, _ := crypto.ToECDSA(fKeyBytes)
 				signaturePack := strings.ToLower(fmt.Sprintf("BRIDGEX-%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr))
-				log.Print(signaturePack)
 				signMaker, _ := FeederationSignV2(signaturePack, fKey)
 				_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
 			}
@@ -256,7 +255,6 @@ func handleSign(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Message and private key are required", http.StatusBadRequest)
 		return
 	}
-	log.Print(req)
 
 	privateKey, err := hex.DecodeString(strings.TrimPrefix(req.PrivateKey, "0x"))
 	if err != nil {
@@ -306,18 +304,13 @@ func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, er
 	seckbytes := pribytes
 	if len(pribytes) < 32 {
 		seckbytes = make([]byte, 32)
-		copy(seckbytes[32-len(pribytes):32], pribytes) //make sure that the length of seckey is 32 bytes
+		copy(seckbytes[32-len(pribytes):32], pribytes)
 	}
-	// Sign the hash using ECDSA
 	signature, err := secp256k1.Sign(data, seckbytes)
 	if err != nil {
 		return "", err
 	}
-
-	// Adjust the V value to be 27 or 28
 	signature[64] += 27
-
-	// Encode the signature to hex format
 	return hexutil.Encode(signature), nil
 }
 
