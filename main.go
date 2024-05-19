@@ -307,10 +307,7 @@ func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, er
 		return "", err
 	}
 
-	// var sig []byte
-	// sig = append(sig, signatureBytes[1:33]...)
-	// sig = append(sig, signatureBytes[33:65]...)
-	// sig = append(sig, signatureBytes[0]-27)
+	signatureBytes[64] += 27
 	return "0x" + hex.EncodeToString(signatureBytes), nil
 }
 
