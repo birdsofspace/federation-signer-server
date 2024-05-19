@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
@@ -304,8 +305,14 @@ func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, er
 	messagePrefix := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 	hash := crypto.Keccak256Hash([]byte(messagePrefix))
 
+	pribytes := privateKey.D.Bytes()
+	seckbytes := pribytes
+	if len(pribytes) < 32 {
+		seckbytes = make([]byte, 32)
+		copy(seckbytes[32-len(pribytes):32], pribytes) //make sure that the length of seckey is 32 bytes
+	}
 	// Sign the hash using ECDSA
-	signature, err := crypto.Sign(hash.Bytes(), privateKey)
+	signature, err := secp256k1.Sign(hash.Bytes(), seckbytes)
 	if err != nil {
 		return "", err
 	}
