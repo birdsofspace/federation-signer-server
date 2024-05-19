@@ -288,27 +288,6 @@ func handleSign(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
-func ecdsaSign(hash []byte, privateKey *ecdsa.PrivateKey) ([]byte, []byte, byte, error) {
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash)
-	if err != nil {
-		return nil, nil, 0, err
-	}
-
-	// Recover the public key
-	publicKey, err := crypto.Ecrecover(hash, append(r.Bytes(), s.Bytes()...))
-	if err != nil {
-		return nil, nil, 0, err
-	}
-
-	// Ensure the recovery id is either 27 or 28
-	v := byte(27)
-	if publicKey == nil || !ecdsa.Verify(&privateKey.PublicKey, hash, r, s) {
-		v = byte(28)
-	}
-
-	return r.Bytes(), s.Bytes(), v, nil
-}
-
 func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, error) {
 	fullMessage := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(message), message)
 	hash := crypto.Keccak256Hash([]byte(fullMessage))
@@ -323,20 +302,20 @@ func FeederationSign(message string, privateKey *ecdsa.PrivateKey) (string, erro
 func FeederationSignV2(message string, privateKey *ecdsa.PrivateKey) (string, error) {
 	// Calculate the keccak256 hash of the message
 	data := []byte(message)
-	hash := crypto.Keccak256Hash([]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)))
+	messagePrefix := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
+	hash := crypto.Keccak256Hash([]byte(messagePrefix))
 
 	// Sign the hash using ECDSA
-	r, s, v, err := ecdsaSign(hash.Bytes(), privateKey)
+	signature, err := crypto.Sign(hash.Bytes(), privateKey)
 	if err != nil {
 		return "", err
 	}
 
-	// Concatenate R, S, and V values to produce the final signature
-	signatureBytes := append(r, s...)
-	signatureBytes = append(signatureBytes, v)
+	// Adjust the V value to be 27 or 28
+	signature[64] += 27
 
 	// Encode the signature to hex format
-	return hexutil.Encode(signatureBytes), nil
+	return hexutil.Encode(signature), nil
 }
 
 func FeederationSignV3(message string, privateKey *ecdsa.PrivateKey) (string, error) {
