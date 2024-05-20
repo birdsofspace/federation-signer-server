@@ -16,7 +16,7 @@
     },
     {
         "chain_id": 137,
-        "rpc": "https://rpc-polygon.com",
+        "rpc": "https://polygon-rpc.com",
         "explorer": "https://polygonscan.com"
     }
 ]
