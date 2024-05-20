@@ -143,9 +143,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-
+		log.Print(string(message))
 		if string(message) == "ping" {
-			_ = conn.WriteMessage(messageType, []byte("pong") )
+			_ = conn.WriteMessage(messageType, []byte("pong"))
 		} else {
 			var data map[string]interface{}
 			_ = json.Unmarshal([]byte(message), &data)
