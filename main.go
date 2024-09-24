@@ -200,8 +200,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					selectedContract = os.Getenv("POLYGON_BRIDGE_CONTRACT_ADDRESS")
 				} else if sourceChainID == 158 {
 					selectedContract = os.Getenv("ROBURNA_BRIDGE_CONTRACT_ADDRESS")
-				} else if sourceChainID == 4002 {
-					selectedContract = os.Getenv("FANTOM_TESTNET_BRIDGE_CONTRACT_ADDRESS")
+				} else if sourceChainID == 1 {
+					selectedContract = os.Getenv("ETH_BRIDGE_CONTRACT_ADDRESS")
 				} else {
 					return
 				}
@@ -225,16 +225,16 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				outputCheck, _ := ether_client.CallContract(context.Background(), ethereum.CallMsg{
 					To:   &bridgeAddress,
 					Data: dataCall,
-				}, nil)
-				outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Int64())
-				if outputBalance != amount {
-					_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount))
-				} else {
+				}, nil);
+				outputBalance := int(big.NewInt(0).SetBytes(outputCheck).Int64());
+				if outputBalance == amount {
 					fKeyBytes, _ := hex.DecodeString(strings.TrimPrefix(os.Getenv("FEDERATION_KEY"), "0x"))
 					fKey, _ := crypto.ToECDSA(fKeyBytes)
-					signaturePack := strings.ToLower(fmt.Sprintf("BRIDGEX-%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr))
-					signMaker, _ := FeederationSignV2(signaturePack, fKey)
-					_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker))
+					signaturePack := strings.ToLower(fmt.Sprintf("BRIDGEX-%s%d%d%s%s%s%d%d%s", userBridge, sourceChainID, targetChainID, sourceContract, targetContract, "BOSS", 18, amount, requestAtStr));
+					signMaker, _ := FeederationSignV2(signaturePack, fKey);
+					_ = conn.WriteMessage(messageType, sendSuccessResponse(requestAtStr, userBridge, "BOSS", 18, sourceContract, targetContract, sourceChainID, targetChainID, amount, signMaker));
+				} else {
+					_ = conn.WriteMessage(messageType, sendPendingResponse(requestAtStr, userBridge, sourceChainID, targetChainID, amount));
 				}
 			}
 		}
@@ -334,6 +334,14 @@ func validateSignatureByAddress(msgHash common.Hash, userSign string, publicKey 
 	address, _ := sigverify.EcRecoverEx(msgHash.Bytes(), signature)
 	matches := strings.ToLower(address.String()) == publicKey
 	return matches
+}
+
+func etherToWei(val *big.Int) *big.Int {
+	return new(big.Int).Mul(val, big.NewInt(Ether))
+}
+
+func weiToEther(val *big.Int) *big.Int {
+	return new(big.Int).Div(val, big.NewInt(Ether))
 }
 
 func sendErrorResponse(code int, message string) []byte {
